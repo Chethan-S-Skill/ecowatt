@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoWatt AI – Campus Energy Optimizer</title>
+  <meta name="description" content="Turn campus smart meter telemetry into measurable energy savings and automated carbon reduction.">
+  
+  <!-- Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <!-- Top Gradient Header Banner -->
+  <header class="header-banner" role="banner">
+    <div class="header-container">
+      <div class="brand-section">
+        <div class="brand-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </div>
+        <div class="brand-title-wrap">
+          <div class="brand-title-row">
+            <h1 class="brand-name">EcoWatt AI</h1>
+            <span class="ai-chip">AI OPTIMIZER</span>
+          </div>
+          <span class="brand-tagline">Turn meter data into measurable savings</span>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <div class="live-badge" id="liveStatusBadge" title="Real-time telemetry stream">
+          <span class="live-dot" id="liveDot"></span>
+          <span id="liveStatusText">Live Feed</span>
+        </div>
+        <span style="font-size:12px;opacity:0.85;" id="lastUpdatedText">Updated: --:--:--</span>
+        
+        <button class="btn-header" id="themeToggleBtn" aria-label="Toggle theme">
+          <span id="themeIcon">🌙</span>
+        </button>
+
+        <a href="/api/export-report" target="_blank" class="btn-header" style="text-decoration:none;" title="Print Campus Energy Audit">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Export Report
+        </a>
+
+        <button class="btn-header" id="authBtn">
+          <span id="authBtnText">Login</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="main-layout" role="main">
+
+    <!-- Filters & Horizon Selector Bar -->
+    <section class="filter-bar" aria-label="Campus controls">
+      <div class="filter-group">
+        <label for="buildingFilter" class="filter-label">Facility Filter:</label>
+        <select id="buildingFilter" class="select-custom" aria-label="Filter by Building">
+          <option value="">Campus Total (All 7 Buildings)</option>
+        </select>
+
+        <label for="daysFilter" class="filter-label">History:</label>
+        <select id="daysFilter" class="select-custom" aria-label="Analysis Window">
+          <option value="7">Last 7 Days</option>
+          <option value="14">Last 14 Days</option>
+          <option value="28" selected>Last 28 Days</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="forecastHorizon" class="filter-label">Forecast Horizon:</label>
+        <select id="forecastHorizon" class="select-custom" aria-label="Forecast Horizon">
+          <option value="24h" selected>Next 24 Hours</option>
+          <option value="7d">Next 7 Days</option>
+        </select>
+
+        <button class="btn-header" id="manualRefreshBtn" style="background:var(--brand-teal);border:none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+          Refresh
+        </button>
+      </div>
+    </section>
+
+    <!-- Top KPI Cards Grid -->
+    <section class="kpi-grid" aria-label="Key Performance Indicators">
+      
+      <!-- KPI 1: Total Consumption -->
+      <article class="kpi-card" id="cardTotalLoad">
+        <div class="kpi-title">
+          <span>Total Consumption</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpiTotalKwh">0</span>
+          <span class="kpi-unit">kWh</span>
+        </div>
+        <div class="kpi-subtext" id="kpiSubtextDays">Across monitored campus meters</div>
+      </article>
+
+      <!-- KPI 2: Preventable Waste -->
+      <article class="kpi-card card-waste" id="cardWaste">
+        <div class="kpi-title">
+          <span>Identified Waste</span>
+          <span style="color:var(--severity-high);font-weight:700;" id="kpiWastePct">0%</span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpiWastedKwh" style="color:var(--severity-high);">0</span>
+          <span class="kpi-unit">kWh</span>
+        </div>
+        <div class="kpi-subtext">
+          <span id="kpiOpenAnomalies">0</span> active anomaly episodes
+        </div>
+      </article>
+
+      <!-- KPI 3: Projected Annual Savings -->
+      <article class="kpi-card card-savings" id="cardSavings">
+        <div class="kpi-title">
+          <span>Projected Savings</span>
+          <span style="color:var(--brand-green);font-size:11px;font-weight:700;">₹8.0/kWh TARIFF</span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpiSavingsRupees" style="color:var(--brand-green);">₹0</span>
+          <span class="kpi-unit">/ year</span>
+        </div>
+        <div class="kpi-subtext" id="kpiAppliedSavingsText">
+          Based on applied what-if fixes
+        </div>
+      </article>
+
+      <!-- KPI 4: Carbon Abatement -->
+      <article class="kpi-card card-carbon" id="cardCarbon">
+        <div class="kpi-title">
+          <span>CO₂ Reduction</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 0 1 10 10c0 5.5-4.5 10-10 10S2 17.5 2 12 6.5 2 12 2zm0 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/></svg>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpiCo2Tons" style="color:var(--brand-blue);">0.0</span>
+          <span class="kpi-unit">t CO₂ / yr</span>
+        </div>
+        <div class="kpi-subtext" id="kpiTreesEquiv">
+          ≈ 0 trees planted annually
+        </div>
+      </article>
+
+      <!-- KPI 5: Circular Energy Score Ring -->
+      <article class="kpi-card card-score" id="cardScore">
+        <div class="kpi-title">
+          <span>Campus Energy Score</span>
+          <span id="scoreOptimizedTag" style="color:var(--brand-green);font-size:11px;font-weight:700;">OPTIMIZED: --</span>
+        </div>
+        <div class="score-card-content">
+          <div>
+            <div class="kpi-value-row" style="margin-bottom:2px;">
+              <span class="kpi-value" id="scoreValueText">100</span>
+              <span class="kpi-unit">/100</span>
+            </div>
+            <div class="kpi-subtext" id="scoreDiffText">Baseline efficiency rating</div>
+          </div>
+
+          <div class="score-gauge-wrap">
+            <svg class="score-gauge-svg" viewBox="0 0 100 100">
+              <circle class="gauge-bg" cx="50" cy="50" r="40"/>
+              <circle class="gauge-val" id="gaugeValCircle" cx="50" cy="50" r="40" stroke-dasharray="251.2" stroke-dashoffset="0"/>
+            </svg>
+            <div class="score-gauge-label">
+              <div class="score-number" id="gaugeCenterNumber">100</div>
+              <div class="score-max">SCORE</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+    </section>
+
+    <!-- Main SVG Load Curve & Forecast Chart -->
+    <section class="chart-section" aria-label="Hourly Energy Load Chart">
+      <div class="chart-header">
+        <div class="section-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--brand-teal)" stroke-width="2.2"><path d="M3 3v18h18M18 9l-5 5-4-4-6 6"/></svg>
+          <span id="chartHeading">Hourly Load Curve & Forecast Zone</span>
+        </div>
+
+        <div class="chart-legend">
+          <div class="legend-item">
+            <span class="legend-marker" style="background:var(--chart-line);"></span>
+            <span>Actual Meter kW</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-marker dot" style="background:var(--chart-anomaly-dot);"></span>
+            <span>Wasted Load Dot</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-marker" style="background:var(--chart-optimized);border:1px dashed var(--chart-optimized);height:2px;"></span>
+            <span>Optimized (Post-Fix)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-marker" style="background:#2563eb;height:2px;"></span>
+            <span>24h Forecast Curve</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hand-written Inline SVG Chart Container -->
+      <div class="svg-chart-container" id="svgChartContainer">
+        <svg class="chart-svg" id="mainEnergySvg" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="loadAreaGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#0d9488" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="#0d9488" stop-opacity="0.0"/>
+            </linearGradient>
+            <linearGradient id="forecastAreaGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#2563eb" stop-opacity="0.25"/>
+              <stop offset="100%" stop-color="#2563eb" stop-opacity="0.0"/>
+            </linearGradient>
+          </defs>
+          <g id="svgGridLines"></g>
+          <g id="svgForecastZone"></g>
+          <path id="svgAreaPath" fill="url(#loadAreaGradient)" d=""></path>
+          <path id="svgOptimizedLine" fill="none" stroke="var(--chart-optimized)" stroke-width="2" stroke-dasharray="5,4" d=""></path>
+          <path id="svgLoadLine" fill="none" stroke="var(--chart-line)" stroke-width="2.5" d=""></path>
+          <path id="svgForecastLine" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-dasharray="3,3" d=""></path>
+          <g id="svgAnomalyDots"></g>
+          <line id="svgCrosshair" x1="0" y1="0" x2="0" y2="0" stroke="var(--text-subtle)" stroke-width="1" stroke-dasharray="3,3" style="display:none;"></line>
+        </svg>
+
+        <!-- Floating Dynamic Tooltip -->
+        <div class="chart-tooltip" id="chartTooltip">
+          <div id="tooltipDate" style="font-weight:700;margin-bottom:4px;">--</div>
+          <div id="tooltipActual">Actual: -- kW</div>
+          <div id="tooltipOptimized" style="color:var(--brand-green);">After Fixes: -- kW</div>
+          <div id="tooltipWasted" style="color:var(--severity-high);font-weight:600;">Wasted: -- kW</div>
+          <div id="tooltipMl" style="color:var(--brand-indigo);font-size:11px;margin-top:2px;">ML Score: --</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Two-Column Grid: Campus Facilities & 24x7 Heatmap -->
+    <section class="grid-two-col">
+      
+      <!-- Facility Cards List -->
+      <article class="panel-card" aria-label="Campus Buildings">
+        <div class="panel-header">
+          <h2 class="section-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/></svg>
+            Campus Facilities (7)
+          </h2>
+          <span style="font-size:12px;color:var(--text-muted);">Click facility to isolate</span>
+        </div>
+        <div class="building-list" id="buildingCardsList">
+          <!-- Populated by JS -->
+        </div>
+      </article>
+
+      <!-- 24x7 Heatmap Grid -->
+      <article class="panel-card" aria-label="Campus Load Heatmap">
+        <div class="panel-header">
+          <h2 class="section-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            24 × 7 Hourly Load Heatmap
+          </h2>
+          <span style="font-size:12px;color:var(--text-muted);">Darker/Amber = Higher Load</span>
+        </div>
+        <div class="heatmap-wrap">
+          <div class="heatmap-grid" id="heatmapGrid">
+            <!-- Heatmap cells inserted here -->
+          </div>
+          <div class="heatmap-hours-row">
+            <div></div>
+            <div>00</div><div>01</div><div>02</div><div>03</div><div>04</div><div>05</div>
+            <div>06</div><div>07</div><div>08</div><div>09</div><div>10</div><div>11</div>
+            <div>12</div><div>13</div><div>14</div><div>15</div><div>16</div><div>17</div>
+            <div>18</div><div>19</div><div>20</div><div>21</div><div>22</div><div>23</div>
+          </div>
+        </div>
+      </article>
+
+    </section>
+
+    <!-- Two-Column Grid: Inefficiencies & Recommendations -->
+    <section class="grid-two-col">
+
+      <!-- Active Anomalies Alert Center -->
+      <article class="panel-card" aria-label="Detected Inefficiencies">
+        <div class="panel-header">
+          <h2 class="section-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--severity-high)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Detected Inefficiencies (<span id="anomaliesCountBadge">0</span>)
+          </h2>
+          <span style="font-size:12px;color:var(--text-muted);">Rule-based + Consecutive Grouping</span>
+        </div>
+        <div class="anomalies-list" id="anomaliesList">
+          <!-- Populated by JS -->
+        </div>
+      </article>
+
+      <!-- What-If Recommendations & Savings Engine -->
+      <article class="panel-card" aria-label="Actionable Recommendations">
+        <div class="panel-header">
+          <h2 class="section-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand-green)" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            What-If Savings Engine
+          </h2>
+          <span style="font-size:12px;color:var(--text-muted);">Toggle to project impact</span>
+        </div>
+        <div class="recommendations-list" id="recommendationsList">
+          <!-- Populated by JS -->
+        </div>
+      </article>
+
+    </section>
+
+    <!-- Weather & ML Transparency Banner -->
+    <section class="panel-card" style="margin-bottom:24px;">
+      <div class="weather-panel-content">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="font-size:24px;">🌤️</div>
+          <div>
+            <div style="font-size:14px;font-weight:700;">Campus Climate Correlation (Open-Meteo)</div>
+            <div style="font-size:12px;color:var(--text-muted);" id="weatherMsgText">
+              Analyzing correlation with historical ambient temperature...
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div class="weather-badge" id="tempBadge">Temp: 26.5°C</div>
+          <div class="weather-badge" id="weatherCorrBadge" style="background:rgba(16,185,129,0.1);color:var(--brand-green);border-color:rgba(16,185,129,0.2);">
+            Correlation: --
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-subtle);font-size:11px;color:var(--text-subtle);">
+        ℹ️ <strong>Model Disclosure:</strong> Anomaly detection uses transparent physics-based rules (idle target baseload, after-hours schedules, robust MAD z-scores). The secondary ML anomaly score is generated by an unsupervised scikit-learn IsolationForest baseline intended for exploratory benchmarking.
+      </div>
+    </section>
+
+    <!-- CSV Ingestion Section -->
+    <section class="panel-card">
+      <div class="panel-header">
+        <h2 class="section-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+          Ingest Campus CSV Data
+        </h2>
+        <span style="font-size:12px;color:var(--text-muted);">Format: timestamp, building, kwh (Max 10MB)</span>
+      </div>
+
+      <div class="dropzone-box" id="csvDropzone">
+        <div class="dropzone-icon">📁</div>
+        <div style="font-weight:600;font-size:14px;margin-bottom:4px;">Drag & Drop meter CSV file here, or click to browse</div>
+        <div style="font-size:12px;color:var(--text-muted);">Automatic schema validation & duplicate skipping</div>
+        <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
+      </div>
+
+      <div class="upload-summary-box" id="uploadSummaryBox">
+        <!-- Results injected here -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- AI Explanation Modal Popup -->
+  <div class="modal-overlay" id="aiModal" role="dialog" aria-modal="true" aria-labelledby="aiModalTitle">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:18px;">✨</span>
+          <h3 id="aiModalTitle" style="font-size:16px;font-weight:700;">AI Root-Cause Explanation</h3>
+        </div>
+        <button class="btn-close" id="closeAiModalBtn" aria-label="Close modal">&times;</button>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;" id="aiModalSubtitle">Analyzing anomaly...</div>
+        <div style="background:var(--bg-primary);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:14px;font-size:14px;line-height:1.6;" id="aiModalExplanation">
+          Loading intelligence model...
+        </div>
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--brand-green);margin-bottom:6px;">Recommended Operational Fix</div>
+        <div style="background:rgba(16,185,129,0.08);border-left:3px solid var(--brand-green);padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;" id="aiModalFix">
+          ...
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-subtle);">
+        <span id="aiModalSource">Model: --</span>
+        <button class="btn-header" style="background:var(--brand-teal);color:#fff;border:none;" id="aiModalDismissBtn">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login Modal Popup -->
+  <div class="modal-overlay" id="loginModal" role="dialog" aria-modal="true">
+    <div class="modal-box" style="max-width:400px;">
+      <div class="modal-header">
+        <h3 style="font-size:16px;font-weight:700;">EcoWatt Access Login</h3>
+        <button class="btn-close" id="closeLoginModalBtn">&times;</button>
+      </div>
+
+      <form id="loginForm" style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;" for="loginEmail">Email:</label>
+          <input type="email" id="loginEmail" required class="select-custom" style="width:100%;" value="admin@campus.edu">
+        </div>
+
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;" for="loginPassword">Password:</label>
+          <input type="password" id="loginPassword" required class="select-custom" style="width:100%;" value="AdminCampus#2026">
+        </div>
+
+        <div id="loginErrorMsg" style="color:var(--severity-high);font-size:12px;display:none;"></div>
+
+        <button type="submit" class="btn-header" style="background:var(--brand-teal);color:#fff;border:none;justify-content:center;padding:10px;margin-top:6px;">
+          Authenticate
+        </button>
+
+        <div style="font-size:11px;color:var(--text-subtle);text-align:center;margin-top:4px;">
+          Demo accounts: admin@campus.edu | viewer@campus.edu
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# Environment & Secrets (Keep API keys secure)
+.env
+*.env.local
+
+# SQLite Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Python bytecode & environments
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.venv/
+.pytest_cache/
+
+# OS & IDE
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
